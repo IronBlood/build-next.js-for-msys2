@@ -125,7 +125,7 @@ jobs:
         shell: msys2 {0}
         working-directory: swc
         env:
-          RUSTUP_TOOLCHAIN: stable-x86_64-pc-windows-gnu
+          RUSTUP_TOOLCHAIN: nightly-x86_64-pc-windows-gnu
           CARGO_BUILD_TARGET: x86_64-pc-windows-gnu
           YARN_CACHE_FOLDER: ~/.cache/yarn
         run: |
