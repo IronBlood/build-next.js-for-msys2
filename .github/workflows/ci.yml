@@ -64,13 +64,15 @@ jobs:
       - name: Install Rust stable and locate rustc
         shell: msys2 {0}
         run: |
-          rustup toolchain install stable
-          rustup default stable
+          rustup toolchain install stable-x86_64-pc-windows-gnu
+          rustup toolchain install nightly-x86_64-pc-windows-gnu
+          rustup default stable-x86_64-pc-windows-gnu
           rustc_path="$(command -v rustc || true)"
           echo "rustc found at: ${rustc_path:-<not-found>}"
           if [ -n "$rustc_path" ]; then
             ls -l "$rustc_path"
-            ls -la "$(dirname "$rustc_path")"
+            rustc -Vv || true
+            rustc +nightly -Vv || true
           else
             for prefix in /mingw64/bin /ucrt64/bin /clang64/bin /clangarm64/bin; do
               [ -d "$prefix" ] || continue
