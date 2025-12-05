@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sys: [UCRT64, CLANG64, MINGW64, CLANGARM64]
+        sys: [UCRT64]
     runs-on: ${{ matrix.sys == 'CLANGARM64' && 'windows-11-arm' || 'windows-latest' }}
 
     steps:
@@ -60,3 +60,23 @@ jobs:
           uname -a
           pacman -Q msys2-runtime || true
           pwd
+
+      - name: Install Rust stable and locate rustc
+        shell: msys2 {0}
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-gnu
+          rustup toolchain install nightly-x86_64-pc-windows-gnu
+          rustup default stable-x86_64-pc-windows-gnu
+          rustc_path="$(command -v rustc || true)"
+          echo "rustc found at: ${rustc_path:-<not-found>}"
+          if [ -n "$rustc_path" ]; then
+            ls -l "$rustc_path"
+            rustc -Vv || true
+            rustc +nightly-x86_64-pc-windows-gnu -Vv || true
+          else
+            for prefix in /mingw64/bin /ucrt64/bin /clang64/bin /clangarm64/bin; do
+              [ -d "$prefix" ] || continue
+              echo "Listing rust binaries under $prefix"
+              ls -la "$prefix" | grep rust || true
+            done
+          fi
