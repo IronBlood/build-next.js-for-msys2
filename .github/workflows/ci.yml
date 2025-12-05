@@ -94,14 +94,40 @@ jobs:
         run: |
           corepack enable
 
+      - name: Clone swc
+        shell: msys2 {0}
+        run: |
+          git clone --depth 1 --branch $SWC_REF https://github.com/swc-project/swc
+
+      - name: Restore yarn cache
+        id: yarn-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/yarn
+          key: swc-yarn-cache-${{ matrix.sys }}-${{ hashFiles('swc/yarn.lock') }}
+
+      - name: Install dependencies
+        shell: msys2 {0}
+        working-directory: swc
+        env:
+          YARN_CACHE_FOLDER: ~/.cache/yarn
+        run: |
+          yarn install
+
+      - name: Save yarn cache
+        if: ${{ steps.yarn-cache.outputs.cache-hit != 'true' && success() }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/yarn
+          key: swc-yarn-cache-${{ matrix.sys }}-${{ hashFiles('swc/yarn.lock') }}
+
       - name: Build swc
         shell: msys2 {0}
+        working-directory: swc
         env:
           RUSTUP_TOOLCHAIN: stable-x86_64-pc-windows-gnu
           CARGO_BUILD_TARGET: x86_64-pc-windows-gnu
+          YARN_CACHE_FOLDER: ~/.cache/yarn
         run: |
-          git clone --depth 1 --branch $SWC_REF https://github.com/swc-project/swc
-          cd swc
-          yarn install
           export CARGO_PROFILE_RELEASE_LTO=false
           yarn build --target x86_64-pc-windows-gnu
