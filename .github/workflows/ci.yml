@@ -60,3 +60,21 @@ jobs:
           uname -a
           pacman -Q msys2-runtime || true
           pwd
+
+      - name: Install Rust stable and locate rustc
+        shell: msys2 {0}
+        run: |
+          rustup toolchain install stable
+          rustup default stable
+          rustc_path="$(command -v rustc || true)"
+          echo "rustc found at: ${rustc_path:-<not-found>}"
+          if [ -n "$rustc_path" ]; then
+            ls -l "$rustc_path"
+            ls -la "$(dirname "$rustc_path")"
+          else
+            for prefix in /mingw64/bin /ucrt64/bin /clang64/bin /clangarm64/bin; do
+              [ -d "$prefix" ] || continue
+              echo "Listing rust binaries under $prefix"
+              ls -la "$prefix" | grep rust || true
+            done
+          fi
