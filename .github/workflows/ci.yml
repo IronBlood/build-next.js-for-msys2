@@ -93,6 +93,7 @@ jobs:
         shell: msys2 {0}
         run: |
           git clone --depth 1 --branch $SWC_REF https://github.com/swc-project/swc
+          cd swc
           yarn install
           export CARGO_PROFILE_RELEASE_LTO=false
           yarn build --target x86_64-pc-windows-gnu
