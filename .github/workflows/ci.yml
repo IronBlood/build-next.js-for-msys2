@@ -52,7 +52,7 @@ jobs:
             rustup:p
             nodejs:p
             protobuf:p
-            canpnproto:p
+            capnproto:p
             ${{ (matrix.sys == 'CLANG64' || matrix.sys == 'CLANGARM64') && 'gcc-compat:p' || '' }}
 
       - name: Show working directory (Windows)
