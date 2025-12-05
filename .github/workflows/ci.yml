@@ -171,7 +171,7 @@ jobs:
         shell: msys2 {0}
         working-directory: swc
         run: |
-          yarn install
+          yarn install --frozen-lockfile
 
       - name: Save yarn cache
         if: ${{ steps.yarn-cache.outputs.cache-hit != 'true' && success() }}
@@ -204,13 +204,15 @@ jobs:
           # use --ignore-scripts to bypass the postinstall scripts, these scripts will invoke
           # the native addons, but currently only -msvc versions are provided, but they cannot
           # be used on msys2 platforms
-          pnpm install --ignore-scripts
+          pnpm install --ignore-scripts --frozen-lockfile
           pnpm add -w @napi-rs/cli@2.18.4 turbo@2.5.5 --ignore-scripts
           # HACK
           cp ../swc/packages/core/swc.win32-x64-gnu.node node_modules/.pnpm/@swc+core-win32-x64-msvc@1.11.24/node_modules/@swc/core-win32-x64-msvc/swc.win32-x64-msvc.node
           cp ../turborepo/target/x86_64-pc-windows-gnu/release-turborepo/turbo.exe node_modules/.pnpm/turbo-windows-64@2.5.5/node_modules/turbo-windows-64/bin/turbo.exe
           # with these two binaries replaced, we can call turbo
           npx turbo run build-native-release -vvv --env-mode loose --remote-cache-timeout 90 --summarize -- --target x86_64-pc-windows-gnu
+          # HACK restore pnpm-lock.yaml for caching
+          git checkout pnpm-lock.yaml
 
       - name: Save cargo registry cache
         if: ${{ steps.cargo-registry-cache.outputs.cache-hit != 'true' && success() }}
