@@ -103,14 +103,12 @@ jobs:
         id: yarn-cache
         uses: actions/cache/restore@v4
         with:
-          path: ~/.cache/yarn
+          path: swc/.yarn/cache
           key: swc-yarn-cache-${{ matrix.sys }}-${{ hashFiles('swc/yarn.lock') }}
 
       - name: Install dependencies
         shell: msys2 {0}
         working-directory: swc
-        env:
-          YARN_CACHE_FOLDER: ~/.cache/yarn
         run: |
           yarn install
 
@@ -118,7 +116,7 @@ jobs:
         if: ${{ steps.yarn-cache.outputs.cache-hit != 'true' && success() }}
         uses: actions/cache/save@v4
         with:
-          path: ~/.cache/yarn
+          path: swc/.yarn/cache
           key: swc-yarn-cache-${{ matrix.sys }}-${{ hashFiles('swc/yarn.lock') }}
 
       - name: Build swc
@@ -127,7 +125,6 @@ jobs:
         env:
           RUSTUP_TOOLCHAIN: nightly-x86_64-pc-windows-gnu
           CARGO_BUILD_TARGET: x86_64-pc-windows-gnu
-          YARN_CACHE_FOLDER: ~/.cache/yarn
         run: |
           export CARGO_PROFILE_RELEASE_LTO=false
           yarn build --target x86_64-pc-windows-gnu
