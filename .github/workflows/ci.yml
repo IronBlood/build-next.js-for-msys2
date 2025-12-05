@@ -25,8 +25,8 @@ jobs:
     env:
       NEXT_JS_REF: "v16.0.3"
       SWC_REF: "v1.11.24"
+      TURBO_REF: "v2.5.5"
       DEBUG: "napi:*"
-      RUSTUP_TOOLCHAIN: nightly-x86_64-pc-windows-gnu
       CARGO_BUILD_TARGET: x86_64-pc-windows-gnu
     strategy:
       fail-fast: false
@@ -50,6 +50,8 @@ jobs:
             cmake:p
             rustup:p
             nodejs:p
+            protobuf:p
+            capnproto:p
             ${{ (matrix.sys == 'CLANG64' || matrix.sys == 'CLANGARM64') && 'gcc-compat:p' || '' }}
 
       - name: Show working directory (Windows)
@@ -71,12 +73,6 @@ jobs:
         run: |
           # NOTE: for clang64 or clangarm64, use -gnullvm
           rustup set default-host x86_64-pc-windows-gnu
-          rustup toolchain install stable-x86_64-pc-windows-gnu
-          rustup toolchain install nightly-x86_64-pc-windows-gnu
-          rustup target add x86_64-pc-windows-gnu --toolchain stable-x86_64-pc-windows-gnu
-          rustup target add x86_64-pc-windows-gnu --toolchain nightly-x86_64-pc-windows-gnu
-          rustup default stable-x86_64-pc-windows-gnu
-          rustup show
           echo "=== installed targets ==="
           rustup target list --installed
           rustc_path="$(command -v rustc || true)"
@@ -98,10 +94,11 @@ jobs:
         run: |
           corepack enable
 
-      - name: Clone swc
+      - name: Clone swc, turbo
         shell: msys2 {0}
         run: |
           git clone --depth 1 --branch $SWC_REF https://github.com/swc-project/swc
+          git clone --depth 1 --branch $TURBO_REF https://github.com/vercel/turborepo
 
       - name: Restore cargo registry cache
         id: cargo-registry-cache
@@ -111,20 +108,20 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-          key: cargo-registry-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-registry-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            cargo-registry-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-
-            cargo-registry-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-
+            cargo-registry-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-
+            cargo-registry-${{ matrix.sys }}-
 
       - name: Restore cargo target cache
         id: cargo-target-cache
         uses: actions/cache/restore@v4
         with:
           path: swc/bindings/target
-          key: cargo-target-swc-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('swc/Cargo.lock') }}
+          key: cargo-target-swc-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('swc/Cargo.lock') }}
           restore-keys: |
-            cargo-target-swc-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-
-            cargo-target-swc-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-
+            cargo-target-swc-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-
+            cargo-target-swc-${{ matrix.sys }}-
 
       - name: Restore yarn cache
         id: yarn-cache
@@ -132,6 +129,16 @@ jobs:
         with:
           path: swc/.yarn/cache
           key: swc-yarn-cache-${{ matrix.sys }}-${{ hashFiles('swc/yarn.lock') }}
+
+      - name: Restore turbo target cache
+        id: turbo-target-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: turborepo/target
+          key: cargo-target-turbo-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('turborepo/Cargo.lock') }}
+          restore-keys: |
+            cargo-target-turbo-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-
+            cargo-target-turbo-${{ matrix.sys }}-
 
       - name: Install dependencies
         shell: msys2 {0}
@@ -149,12 +156,19 @@ jobs:
       - name: Build swc
         shell: msys2 {0}
         working-directory: swc
-        env:
-          RUSTUP_TOOLCHAIN: nightly-x86_64-pc-windows-gnu
-          CARGO_BUILD_TARGET: x86_64-pc-windows-gnu
         run: |
           export CARGO_PROFILE_RELEASE_LTO=false
           yarn build --target x86_64-pc-windows-gnu
+
+      - name: Build turbo
+        shell: msys2 {0}
+        working-directory: turborepo
+        run: |
+          # show version and rust toolchain
+          git rev-parse HEAD
+          rustc -Vv
+          rustup show active-toolchain
+          cargo build --profile release-turborepo -p turbo --target x86_64-pc-windows-gnu
 
       - name: Save cargo registry cache
         if: ${{ steps.cargo-registry-cache.outputs.cache-hit != 'true' && success() }}
@@ -164,11 +178,18 @@ jobs:
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
             ~/.cargo/git/db
-          key: cargo-registry-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-registry-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Save cargo target cache
         if: ${{ steps.cargo-target-cache.outputs.cache-hit != 'true' && success() }}
         uses: actions/cache/save@v4
         with:
           path: swc/bindings/target
-          key: cargo-target-swc-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('swc/Cargo.lock') }}
+          key: cargo-target-swc-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('swc/Cargo.lock') }}
+
+      - name: Save turbo target cache
+        if: ${{ steps.turbo-target-cache.outputs.cache-hit != 'true' && success() }}
+        uses: actions/cache/save@v4
+        with:
+          path: turborepo/target
+          key: cargo-target-turbo-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('turborepo/Cargo.lock') }}
