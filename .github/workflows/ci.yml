@@ -1,0 +1,62 @@
+name: Build next.js with its dependencies
+
+env:
+  DEBUG: "napi:*"
+  RUST_BACKTRACE: full
+  # https://github.com/nodejs/node/issues/51555#issuecomment-2290742072
+  DISABLE_V8_COMPILE_CACHE: 1
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ci.yml"
+      - "patches/**/*.patch"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/ci.yml"
+      - "patches/**/*.patch"
+
+jobs:
+  build:
+    env:
+      NEXT_JS_REF: "v16.0.3"
+    strategy:
+      fail-fast: false
+      matrix:
+        sys: [UCRT64, CLANG64, MINGW64, CLANGARM64]
+    runs-on: ${{ matrix.sys == 'CLANGARM64' && 'windows-11-arm' || 'windows-latest' }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.sys }}
+          update: false
+          install: >-
+            git
+            curl
+          pacboy: >-
+            toolchain:p
+            cmake:p
+            rustup:p
+            ${{ (matrix.sys == 'CLANG64' || matrix.sys == 'CLANGARM64') && 'gcc-compat:p' || '' }}
+
+      - name: Show working directory (Windows)
+        shell: pwsh
+        run: |
+          Get-Location
+          ls
+
+      - name: Echo System Info
+        shell: msys2 {0}
+        run: |
+          echo "MSYSTEM = $MSYSTEM"
+          uname -a
+          pacman -Q msys2-runtime || true
+          pwd
