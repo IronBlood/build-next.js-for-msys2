@@ -24,6 +24,8 @@ jobs:
   build:
     env:
       NEXT_JS_REF: "v16.0.3"
+      SWC_REF: "v1.11.24"
+      DEBUG: "napi:*"
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +47,7 @@ jobs:
             toolchain:p
             cmake:p
             rustup:p
+            nodejs:p
             ${{ (matrix.sys == 'CLANG64' || matrix.sys == 'CLANGARM64') && 'gcc-compat:p' || '' }}
 
       - name: Show working directory (Windows)
@@ -80,3 +83,16 @@ jobs:
               ls -la "$prefix" | grep rust || true
             done
           fi
+
+      - name: Setup node
+        shell: msys2 {0}
+        run: |
+          corepack enable
+
+      - name: Build swc
+        shell: msys2 {0}
+        run: |
+          git clone --depth 1 --branch $SWC_REF https://github.com/swc-project/swc
+          yarn install
+          export CARGO_PROFILE_RELEASE_LTO=false
+          yarn build --target x86_64-pc-windows-gnu
