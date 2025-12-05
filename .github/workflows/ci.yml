@@ -51,6 +51,8 @@ jobs:
             cmake:p
             rustup:p
             nodejs:p
+            protobuf:p
+            canpnproto:p
             ${{ (matrix.sys == 'CLANG64' || matrix.sys == 'CLANGARM64') && 'gcc-compat:p' || '' }}
 
       - name: Show working directory (Windows)
