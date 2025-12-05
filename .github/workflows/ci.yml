@@ -201,6 +201,8 @@ jobs:
         shell: msys2 {0}
         working-directory: next.js
         run: |
+          # try with the latest next-9 pnpm to see whether `--ignore-scripts` works
+          git apply ../nextjs.package.json.patch
           # use --ignore-scripts to bypass the postinstall scripts, these scripts will invoke
           # the native addons, but currently only -msvc versions are provided, but they cannot
           # be used on msys2 platforms
