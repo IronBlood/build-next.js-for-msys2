@@ -72,6 +72,9 @@ jobs:
           rustup target add x86_64-pc-windows-gnu --toolchain stable-x86_64-pc-windows-gnu
           rustup target add x86_64-pc-windows-gnu --toolchain nightly-x86_64-pc-windows-gnu
           rustup default stable-x86_64-pc-windows-gnu
+          rustup show
+          echo "=== installed targets ==="
+          rustup target list --installed
           rustc_path="$(command -v rustc || true)"
           echo "rustc found at: ${rustc_path:-<not-found>}"
           if [ -n "$rustc_path" ]; then
@@ -93,6 +96,9 @@ jobs:
 
       - name: Build swc
         shell: msys2 {0}
+        env:
+          RUSTUP_TOOLCHAIN: stable-x86_64-pc-windows-gnu
+          CARGO_BUILD_TARGET: x86_64-pc-windows-gnu
         run: |
           git clone --depth 1 --branch $SWC_REF https://github.com/swc-project/swc
           cd swc
