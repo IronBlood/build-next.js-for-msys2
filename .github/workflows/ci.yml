@@ -69,6 +69,8 @@ jobs:
       - name: Install Rust stable and locate rustc
         shell: msys2 {0}
         run: |
+          # NOTE: for clang64 or clangarm64, use -gnullvm
+          rustup set default-host x86_64-pc-windows-gnu
           rustup toolchain install stable-x86_64-pc-windows-gnu
           rustup toolchain install nightly-x86_64-pc-windows-gnu
           rustup target add x86_64-pc-windows-gnu --toolchain stable-x86_64-pc-windows-gnu
@@ -118,7 +120,7 @@ jobs:
         id: cargo-target-cache
         uses: actions/cache/restore@v4
         with:
-          path: swc/target
+          path: swc/bindings/target
           key: cargo-target-swc-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('swc/Cargo.lock') }}
           restore-keys: |
             cargo-target-swc-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-
@@ -168,5 +170,5 @@ jobs:
         if: ${{ steps.cargo-target-cache.outputs.cache-hit != 'true' && success() }}
         uses: actions/cache/save@v4
         with:
-          path: swc/target
+          path: swc/bindings/target
           key: cargo-target-swc-${{ matrix.sys }}-${{ env.RUSTUP_TOOLCHAIN }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('swc/Cargo.lock') }}
