@@ -178,7 +178,7 @@ jobs:
           yarn install --frozen-lockfile
 
       - name: Save yarn cache
-        if: ${{ steps.yarn-cache.outputs.cache-hit != 'true' && success() }}
+        if: ${{ success() }}
         uses: actions/cache/save@v4
         with:
           path: swc/.yarn/cache
@@ -269,7 +269,7 @@ jobs:
             gh release upload "$tag" "${assets[@]}" --clobber
 
       - name: Save cargo registry cache
-        if: ${{ steps.cargo-registry-cache.outputs.cache-hit != 'true' && success() }}
+        if: ${{ success() }}
         uses: actions/cache/save@v4
         with:
           path: |
@@ -279,28 +279,28 @@ jobs:
           key: cargo-registry-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Save cargo target cache
-        if: ${{ steps.cargo-target-cache.outputs.cache-hit != 'true' && success() }}
+        if: ${{ success() }}
         uses: actions/cache/save@v4
         with:
           path: swc/bindings/target
           key: cargo-target-swc-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('swc/Cargo.lock') }}
 
       - name: Save turbo target cache
-        if: ${{ steps.turbo-target-cache.outputs.cache-hit != 'true' && success() }}
+        if: ${{ success() }}
         uses: actions/cache/save@v4
         with:
           path: turborepo/target
           key: cargo-target-turbo-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('turborepo/Cargo.lock') }}
 
       - name: Save next.js cargo target cache
-        if: ${{ steps.next-target-cache.outputs.cache-hit != 'true' && success() }}
+        if: ${{ success() }}
         uses: actions/cache/save@v4
         with:
           path: next.js/target
           key: cargo-target-next-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('next.js/Cargo.lock') }}
 
       - name: Save pnpm store
-        if: ${{ steps.pnpm-store-cache.outputs.cache-hit != 'true' && success() }}
+        if: ${{ success() }}
         uses: actions/cache/save@v4
         with:
           path: ${{ env.PNPM_STORE_PATH }}
