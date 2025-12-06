@@ -199,35 +199,20 @@ jobs:
           rustup show active-toolchain
           cargo build --profile release-turborepo -p turbo --target x86_64-pc-windows-gnu
 
-      - name: Inspect pnpm config and dump env related to npm/pnpm
-        if: ${{ false }}
-        shell: msys2 {0}
-        working-directory: next.js
-        run: |
-          # try with the latest next-9 pnpm to see whether `--ignore-scripts` works
-          git apply ../nextjs.package.json.patch
-          which pnpm
-          pnpm --version
-          echo "=== pnpm config list ==="
-          pnpm config list
-          env | grep -i 'pnpm\|npm' || echo "no pnpm/npm-specific env vars"
-
       - name: Build next.js
         shell: msys2 {0}
         working-directory: next.js
         run: |
+          # HACK use an empty `package.json` to install @napi-rs/cli and turbo
           rm package.json
           npm init -y
           pnpm add -w @napi-rs/cli@2.18.4 turbo@2.5.5 --ignore-scripts --no-lockfile
           # restore
           git checkout package.json
-          # HACK
-          #cp ../swc/packages/core/swc.win32-x64-gnu.node node_modules/.pnpm/@swc+core-win32-x64-msvc@1.11.24/node_modules/@swc/core-win32-x64-msvc/swc.win32-x64-msvc.node
+          # HACK Use the turbo built in the previous step
           cp ../turborepo/target/x86_64-pc-windows-gnu/release-turborepo/turbo.exe node_modules/.pnpm/turbo-windows-64@2.5.5/node_modules/turbo-windows-64/bin/turbo.exe
-          # with these two binaries replaced, we can call turbo
+          # in the original workflow, `pnpm dlx turbo@version` is used
           npx turbo run build-native-release -vvv --env-mode loose --remote-cache-timeout 90 --summarize -- --target x86_64-pc-windows-gnu
-          # HACK restore pnpm-lock.yaml for caching
-          git checkout pnpm-lock.yaml
 
       - name: Save cargo registry cache
         if: ${{ steps.cargo-registry-cache.outputs.cache-hit != 'true' && success() }}
