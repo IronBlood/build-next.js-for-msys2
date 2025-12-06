@@ -197,6 +197,16 @@ jobs:
           rustup show active-toolchain
           cargo build --profile release-turborepo -p turbo --target x86_64-pc-windows-gnu
 
+      - name: Inspect pnpm config and dump env related to npm/pnpm
+        shell: msys2 {0}
+        working-directory: next.js
+        run: |
+          which pnpm
+          pnpm --version
+          echo "=== pnpm config list ==="
+          pnpm config list
+          env | grep -i 'pnpm\|npm' || echo "no pnpm/npm-specific env vars"
+
       - name: Build next.js
         shell: msys2 {0}
         working-directory: next.js
