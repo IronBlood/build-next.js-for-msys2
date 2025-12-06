@@ -7,10 +7,10 @@ index 98c73521..d36cbe7b 100644
    "engines": {
      "node": ">=20.9.0",
 -    "pnpm": "9.6.0"
-+    "pnpm": "9.15.9"
++    "pnpm": "10.24.0"
    },
 -  "packageManager": "pnpm@9.6.0",
-+  "packageManager": "pnpm@9.15.9",
++  "packageManager": "pnpm@10.24.0",
    "pnpm": {
      "overrides": {
        "webpack": "5.98.0",
