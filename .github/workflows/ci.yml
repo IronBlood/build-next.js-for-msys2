@@ -28,6 +28,8 @@ jobs:
       TURBO_REF: "v2.5.5"
       DEBUG: "napi:*"
       CARGO_BUILD_TARGET: x86_64-pc-windows-gnu
+      PNPM_CONFIG_IGNORE_SCRIPTS: "true"
+      PNPM_CONFIG_IGNORE_PNPMFILE: "true"
     strategy:
       fail-fast: false
       matrix:
@@ -206,6 +208,14 @@ jobs:
           echo "=== pnpm config list ==="
           pnpm config list
           env | grep -i 'pnpm\|npm' || echo "no pnpm/npm-specific env vars"
+
+      - name: Debug pnpm install (check for lifecycle scripts)
+        shell: msys2 {0}
+        working-directory: next.js
+        run: |
+          pnpm install --ignore-scripts --frozen-lockfile --reporter ndjson > pnpm-install-log.jsonl
+          echo "=== Any lifecycle events? ==="
+          grep -i 'Running .*script' pnpm-install-log.jsonl || echo "No lifecycle scripts reported."
 
       - name: Build next.js
         shell: msys2 {0}
