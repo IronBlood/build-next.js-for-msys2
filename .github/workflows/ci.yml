@@ -22,6 +22,8 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: write
     env:
       NEXT_JS_REF: "v16.0.3"
       SWC_REF: "v1.11.24"
