@@ -1,0 +1,2 @@
+# All patch files must be LF only, they'll be used later in msys2.
+*.patch text eol=lf

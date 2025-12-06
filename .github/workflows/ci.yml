@@ -28,6 +28,8 @@ jobs:
       TURBO_REF: "v2.5.5"
       DEBUG: "napi:*"
       CARGO_BUILD_TARGET: x86_64-pc-windows-gnu
+      PNPM_CONFIG_IGNORE_SCRIPTS: "true"
+      PNPM_CONFIG_IGNORE_PNPMFILE: "true"
     strategy:
       fail-fast: false
       matrix:
@@ -94,11 +96,19 @@ jobs:
         run: |
           corepack enable
 
-      - name: Clone swc, turbo
+      - name: Determine pnpm store path
+        shell: msys2 {0}
+        run: |
+          PNPM_STORE_PATH="$(pnpm store path)"
+          echo "PNPM_STORE_PATH=${PNPM_STORE_PATH}" >> "$GITHUB_ENV"
+          echo "pnpm store path: ${PNPM_STORE_PATH}"
+
+      - name: Clone swc, turbo and next.js
         shell: msys2 {0}
         run: |
           git clone --depth 1 --branch $SWC_REF https://github.com/swc-project/swc
           git clone --depth 1 --branch $TURBO_REF https://github.com/vercel/turborepo
+          git clone --depth 1 --branch $NEXT_JS_REF https://github.com/vercel/next.js
 
       - name: Restore cargo registry cache
         id: cargo-registry-cache
@@ -113,7 +123,7 @@ jobs:
             cargo-registry-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-
             cargo-registry-${{ matrix.sys }}-
 
-      - name: Restore cargo target cache
+      - name: Restore swc target cache
         id: cargo-target-cache
         uses: actions/cache/restore@v4
         with:
@@ -140,11 +150,30 @@ jobs:
             cargo-target-turbo-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-
             cargo-target-turbo-${{ matrix.sys }}-
 
+      - name: Restore next.js cargo target cache
+        id: next-target-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: next.js/target
+          key: cargo-target-next-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('next.js/Cargo.lock') }}
+          restore-keys: |
+            cargo-target-next-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-
+            cargo-target-next-${{ matrix.sys }}-
+
+      - name: Restore pnpm store
+        id: pnpm-store-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: pnpm-store-${{ matrix.sys }}-${{ hashFiles('next.js/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ matrix.sys }}-
+
       - name: Install dependencies
         shell: msys2 {0}
         working-directory: swc
         run: |
-          yarn install
+          yarn install --frozen-lockfile
 
       - name: Save yarn cache
         if: ${{ steps.yarn-cache.outputs.cache-hit != 'true' && success() }}
@@ -170,6 +199,21 @@ jobs:
           rustup show active-toolchain
           cargo build --profile release-turborepo -p turbo --target x86_64-pc-windows-gnu
 
+      - name: Build next.js
+        shell: msys2 {0}
+        working-directory: next.js
+        run: |
+          # HACK use an empty `package.json` to install @napi-rs/cli and turbo
+          rm package.json
+          npm init -y
+          pnpm add -w @napi-rs/cli@2.18.4 turbo@2.5.5 --ignore-scripts --no-lockfile
+          # restore
+          git checkout package.json
+          # HACK Use the turbo built in the previous step
+          cp ../turborepo/target/x86_64-pc-windows-gnu/release-turborepo/turbo.exe node_modules/.pnpm/turbo-windows-64@2.5.5/node_modules/turbo-windows-64/bin/turbo.exe
+          # in the original workflow, `pnpm dlx turbo@version` is used
+          npx turbo run build-native-release -vvv --env-mode loose --remote-cache-timeout 90 --summarize -- --target x86_64-pc-windows-gnu
+
       - name: Save cargo registry cache
         if: ${{ steps.cargo-registry-cache.outputs.cache-hit != 'true' && success() }}
         uses: actions/cache/save@v4
@@ -193,3 +237,17 @@ jobs:
         with:
           path: turborepo/target
           key: cargo-target-turbo-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('turborepo/Cargo.lock') }}
+
+      - name: Save next.js cargo target cache
+        if: ${{ steps.next-target-cache.outputs.cache-hit != 'true' && success() }}
+        uses: actions/cache/save@v4
+        with:
+          path: next.js/target
+          key: cargo-target-next-${{ matrix.sys }}-${{ env.CARGO_BUILD_TARGET }}-${{ hashFiles('next.js/Cargo.lock') }}
+
+      - name: Save pnpm store
+        if: ${{ steps.pnpm-store-cache.outputs.cache-hit != 'true' && success() }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: pnpm-store-${{ matrix.sys }}-${{ hashFiles('next.js/pnpm-lock.yaml') }}
