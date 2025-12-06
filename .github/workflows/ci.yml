@@ -200,6 +200,7 @@ jobs:
           cargo build --profile release-turborepo -p turbo --target x86_64-pc-windows-gnu
 
       - name: Inspect pnpm config and dump env related to npm/pnpm
+        if: ${{ false }}
         shell: msys2 {0}
         working-directory: next.js
         run: |
@@ -215,13 +216,13 @@ jobs:
         shell: msys2 {0}
         working-directory: next.js
         run: |
-          # use --ignore-scripts to bypass the postinstall scripts, these scripts will invoke
-          # the native addons, but currently only -msvc versions are provided, but they cannot
-          # be used on msys2 platforms
-          pnpm install --ignore-scripts --no-lockfile
+          rm package.json
+          npm init -y
           pnpm add -w @napi-rs/cli@2.18.4 turbo@2.5.5 --ignore-scripts --no-lockfile
+          # restore
+          git checkout package.json
           # HACK
-          cp ../swc/packages/core/swc.win32-x64-gnu.node node_modules/.pnpm/@swc+core-win32-x64-msvc@1.11.24/node_modules/@swc/core-win32-x64-msvc/swc.win32-x64-msvc.node
+          #cp ../swc/packages/core/swc.win32-x64-gnu.node node_modules/.pnpm/@swc+core-win32-x64-msvc@1.11.24/node_modules/@swc/core-win32-x64-msvc/swc.win32-x64-msvc.node
           cp ../turborepo/target/x86_64-pc-windows-gnu/release-turborepo/turbo.exe node_modules/.pnpm/turbo-windows-64@2.5.5/node_modules/turbo-windows-64/bin/turbo.exe
           # with these two binaries replaced, we can call turbo
           npx turbo run build-native-release -vvv --env-mode loose --remote-cache-timeout 90 --summarize -- --target x86_64-pc-windows-gnu
