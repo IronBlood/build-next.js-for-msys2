@@ -214,6 +214,58 @@ jobs:
           # in the original workflow, `pnpm dlx turbo@version` is used
           npx turbo run build-native-release -vvv --env-mode loose --remote-cache-timeout 90 --summarize -- --target x86_64-pc-windows-gnu
 
+      - name: Compute release tag
+        shell: msys2 {0}
+        run: |
+          RELEASE_TAG="${NEXT_JS_REF}-$(date -u +%Y%m%d%H%M%S)"
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> "$GITHUB_ENV"
+          echo "Release tag: ${RELEASE_TAG}"
+
+      - name: Release assets (dry-run for PR)
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${RELEASE_TAG}"
+          title="${tag}"
+          notes="Automated build for ${NEXT_JS_REF} with swc ${SWC_REF}, turbo ${TURBO_REF}"
+          assets=(
+            "swc/packages/core/swc.win32-x64-gnu.node"
+            "turborepo/target/x86_64-pc-windows-gnu/release-turborepo/turbo.exe"
+            "next.js/packages/next-swc/native/next-swc.win32-x64-gnu.node"
+          )
+          echo "Release (dry-run) tag: ${tag}"
+          echo "Title: ${title}"
+          echo "Notes: ${notes}"
+          echo "Assets:"
+          for f in "${assets[@]}"; do
+            if [ -e "$f" ]; then
+              size=$(stat -c '%s' "$f")
+              echo "  $f (${size} bytes)"
+            else
+              echo "  $f (missing)"
+            fi
+          done
+
+      - name: Publish GitHub release assets
+        if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${RELEASE_TAG}"
+          title="${tag}"
+          notes="Automated build for ${NEXT_JS_REF} with swc ${SWC_REF}, turbo ${TURBO_REF}"
+          assets=(
+            "swc/packages/core/swc.win32-x64-gnu.node"
+            "turborepo/target/x86_64-pc-windows-gnu/release-turborepo/turbo.exe"
+            "next.js/packages/next-swc/native/next-swc.win32-x64-gnu.node"
+          )
+          echo "Creating/updating release ${tag}"
+          gh release create "$tag" "${assets[@]}" --title "$title" --notes "$notes" --target "$GITHUB_SHA" || \
+            gh release upload "$tag" "${assets[@]}" --clobber
+
       - name: Save cargo registry cache
         if: ${{ steps.cargo-registry-cache.outputs.cache-hit != 'true' && success() }}
         uses: actions/cache/save@v4
